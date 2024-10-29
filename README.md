@@ -1,4 +1,3 @@
-<img width="499" alt="image" src="https://github.com/user-attachments/assets/5e942d22-e709-4489-8d92-32f6959cb161"># SecurePackageTracking
 
 ## UML
 
@@ -77,6 +76,7 @@ classDiagram
     style ProcessorPerformanceEstimator fill:#d3d3d3
     style Test fill:#d3d3d3
 ```
+
 
 ## Protocol
 Handling Client Connections
