@@ -15,6 +15,15 @@ public class PackageServer {
     private static final String PRIVATE_KEY_FILE = "private.key";
     private static final String PUBLIC_KEY_FILE = "public.key";
 
+    private ServerSocket serverSocket;
+
+    // Shared queues for timing data
+    public static ConcurrentLinkedQueue<Long> challengeResponseTimes = new ConcurrentLinkedQueue<>();
+    public static ConcurrentLinkedQueue<Long> dhGenerationTimes = new ConcurrentLinkedQueue<>();
+    public static ConcurrentLinkedQueue<Long> verificationTimes = new ConcurrentLinkedQueue<>();
+    public static ConcurrentLinkedQueue<Long> symmetricEncryptionTimes = new ConcurrentLinkedQueue<>();
+    public static ConcurrentLinkedQueue<Long> asymmetricEncryptionTimes = new ConcurrentLinkedQueue<>();
+
     // Package states as constants
     private static final int ENOFICINA = 0;
     private static final int RECOGIDO = 1;
@@ -33,7 +42,13 @@ public class PackageServer {
 
     public PackageServer() {
         initializePackageStates();
+        try {
+            readRSAKeys();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
+    
 
     public static void main(String[] args) {
         PackageServer server = new PackageServer();
@@ -101,39 +116,76 @@ public class PackageServer {
     }
 
     private void readRSAKeys() throws Exception {
-        // Read private key
-        byte[] privateKeyBytes = readKeyFromFile(PRIVATE_KEY_FILE);
-        PKCS8EncodedKeySpec privateSpec = new PKCS8EncodedKeySpec(privateKeyBytes);
-        KeyFactory keyFactory = KeyFactory.getInstance("RSA");
-        privateKey = keyFactory.generatePrivate(privateSpec);
-
-        // Read public key
-        byte[] publicKeyBytes = readKeyFromFile(PUBLIC_KEY_FILE);
-        X509EncodedKeySpec publicSpec = new X509EncodedKeySpec(publicKeyBytes);
-        publicKey = keyFactory.generatePublic(publicSpec);
-
-        System.out.println("Llaves RSA leídas desde archivos.");
+        File privateKeyFile = new File(PRIVATE_KEY_FILE);
+        File publicKeyFile = new File(PUBLIC_KEY_FILE);
+        
+        if (!privateKeyFile.exists() || !publicKeyFile.exists()) {
+            System.out.println("Key files not found. Generating new RSA keys...");
+            generateRSAKeys();
+        } else {
+            // Read private key
+            byte[] privateKeyBytes = readKeyFromFile(PRIVATE_KEY_FILE);
+            PKCS8EncodedKeySpec privateSpec = new PKCS8EncodedKeySpec(privateKeyBytes);
+            KeyFactory keyFactory = KeyFactory.getInstance("RSA");
+            privateKey = keyFactory.generatePrivate(privateSpec);
+        
+            // Read public key
+            byte[] publicKeyBytes = readKeyFromFile(PUBLIC_KEY_FILE);
+            X509EncodedKeySpec publicSpec = new X509EncodedKeySpec(publicKeyBytes);
+            publicKey = keyFactory.generatePublic(publicSpec);
+        
+            System.out.println("Llaves RSA leídas desde archivos.");
+        }
     }
+    
 
     public void startServerIterative() throws IOException {
-        ServerSocket serverSocket = new ServerSocket(PORT);
+        serverSocket = new ServerSocket(PORT);
         System.out.println("Servidor iterativo iniciado en el puerto " + PORT);
-    
-        while (true) {
-            Socket clientSocket = serverSocket.accept();
-            handleClient(clientSocket);
+
+        try {
+            while (!Thread.currentThread().isInterrupted()) {
+                Socket clientSocket = serverSocket.accept();
+                handleClient(clientSocket);
+            }
+        } catch (IOException e) {
+            // Handle exception
+        } finally {
+            if (serverSocket != null && !serverSocket.isClosed()) {
+                serverSocket.close();
+            }
         }
     }
 
     public void startServerConcurrent(int numThreads) throws IOException {
-        ServerSocket serverSocket = new ServerSocket(PORT);
+        serverSocket = new ServerSocket(PORT);
         System.out.println("Servidor concurrente iniciado en el puerto " + PORT);
 
         ExecutorService executor = Executors.newFixedThreadPool(numThreads);
 
-        while (true) {
-            Socket clientSocket = serverSocket.accept();
-            executor.execute(() -> handleClient(clientSocket));
+        try {
+            while (!Thread.currentThread().isInterrupted()) {
+                Socket clientSocket = serverSocket.accept();
+                executor.execute(() -> handleClient(clientSocket));
+            }
+        } catch (IOException e) {
+            // Handle exception
+        } finally {
+            if (serverSocket != null && !serverSocket.isClosed()) {
+                serverSocket.close();
+            }
+            executor.shutdown();
+        }
+    }
+
+    public void stopServer() {
+        try {
+            if (serverSocket != null && !serverSocket.isClosed()) {
+                serverSocket.close();
+                System.out.println("Server socket closed.");
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 
@@ -164,6 +216,7 @@ public class PackageServer {
 
             long endTimeChallenge = System.nanoTime();
             long timeToDecryptChallenge = endTimeChallenge - startTimeChallenge;
+
 
             // Step 4: Send Rta (Reto) back to client
             out.writeInt(retoBytes.length);
@@ -362,7 +415,21 @@ public class PackageServer {
 
             System.out.println("Tiempo para cifrar el estado con cifrado simétrico: " + timeToEncryptStateSymmetric + " ns");
 
-            // You can save these times for your analysis
+            // After measuring timeToDecryptChallenge
+            challengeResponseTimes.add(timeToDecryptChallenge);
+
+            // After measuring timeToGenerateDH
+            dhGenerationTimes.add(timeToGenerateDH);
+
+            // After measuring timeToVerify
+            verificationTimes.add(timeToVerify);
+
+            // After measuring timeToEncryptStateSymmetric
+            symmetricEncryptionTimes.add(timeToEncryptStateSymmetric);
+
+            // After measuring timeToEncryptStateAsymmetric
+            asymmetricEncryptionTimes.add(timeToEncryptStateAsymmetric);
+
 
         } catch (Exception e) {
             e.printStackTrace();

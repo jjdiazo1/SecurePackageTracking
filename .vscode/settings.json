@@ -1,0 +1,8 @@
+{
+    "java.project.sourcePaths": [
+        "caso3_jj.diazo1_p.paffen/src"
+    ],
+    "java.project.referencedLibraries": [
+        "caso3_jj.diazo1_p.paffen/libs/jfreechart-1.5.2.jar"
+    ]
+}

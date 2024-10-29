@@ -1,0 +1,84 @@
+\documentclass{article}
+\usepackage{amsmath}
+\usepackage{siunitx}
+
+\title{Cálculo de Operaciones de Cifrado por Segundo}
+\author{}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\section*{Introducción}
+En este documento, explicaremos el cálculo para estimar la cantidad de operaciones de cifrado por segundo que una máquina puede realizar. Este cálculo se basa en los tiempos promedio de cifrado simétrico y asimétrico medidos en nanosegundos. Los pasos incluyen el cálculo del tiempo promedio, la conversión de unidades y la estimación de operaciones por segundo.
+
+\section*{Cálculo del Tiempo Promedio}
+
+Para cada tipo de operación (cifrado simétrico y cifrado asimétrico), primero calculamos el tiempo promedio en nanosegundos (\si{\nano\second}) sumando todos los tiempos individuales de las operaciones y dividiendo por la cantidad de operaciones:
+
+\begin{equation}
+    \text{Tiempo Promedio (ns)} = \frac{\sum_{i=1}^{n} t_i}{n}
+\end{equation}
+
+donde:
+\begin{itemize}
+    \item \( t_i \) es el tiempo individual de la operación \( i \) en nanosegundos.
+    \item \( n \) es el número total de operaciones.
+\end{itemize}
+
+\section*{Conversión de Nanosegundos a Segundos}
+
+Para obtener el tiempo promedio en segundos, convertimos el resultado dividiendo entre \( 10^9 \), ya que \( 1 \ \text{segundo} = 10^9 \ \si{\nano\second} \):
+
+\begin{equation}
+    \text{Tiempo Promedio (s)} = \frac{\text{Tiempo Promedio (ns)}}{10^9}
+\end{equation}
+
+\section*{Estimación de Operaciones por Segundo}
+
+Una vez que tenemos el tiempo promedio en segundos para una operación, podemos estimar el número de operaciones de cifrado que la máquina puede realizar por segundo. Esto se calcula tomando el inverso del tiempo promedio en segundos:
+
+\begin{equation}
+    \text{Operaciones por Segundo} = \frac{1}{\text{Tiempo Promedio (s)}}
+\end{equation}
+
+\section*{Aplicación al Cifrado Simétrico y Asimétrico}
+
+Aplicamos los pasos anteriores tanto para el cifrado simétrico como para el cifrado asimétrico:
+
+\begin{itemize}
+    \item \textbf{Cifrado Simétrico:}
+    \begin{equation}
+        \text{Tiempo Promedio Simétrico (ns)} = \frac{\sum_{i=1}^{n} t_{s,i}}{n}
+    \end{equation}
+    \begin{equation}
+        \text{Tiempo Promedio Simétrico (s)} = \frac{\text{Tiempo Promedio Simétrico (ns)}}{10^9}
+    \end{equation}
+    \begin{equation}
+        \text{Operaciones Simétricas por Segundo} = \frac{1}{\text{Tiempo Promedio Simétrico (s)}}
+    \end{equation}
+
+    \item \textbf{Cifrado Asimétrico:}
+    \begin{equation}
+        \text{Tiempo Promedio Asimétrico (ns)} = \frac{\sum_{i=1}^{m} t_{a,i}}{m}
+    \end{equation}
+    \begin{equation}
+        \text{Tiempo Promedio Asimétrico (s)} = \frac{\text{Tiempo Promedio Asimétrico (ns)}}{10^9}
+    \end{equation}
+    \begin{equation}
+        \text{Operaciones Asimétricas por Segundo} = \frac{1}{\text{Tiempo Promedio Asimétrico (s)}}
+    \end{equation}
+\end{itemize}
+
+donde:
+\begin{itemize}
+    \item \( t_{s,i} \) es el tiempo individual de una operación de cifrado simétrico \( i \).
+    \item \( t_{a,i} \) es el tiempo individual de una operación de cifrado asimétrico \( i \).
+    \item \( n \) y \( m \) son las cantidades de muestras para el cifrado simétrico y asimétrico, respectivamente.
+\end{itemize}
+
+\section*{Uso}
+Estos cálculos nos permiten estimar cuántas operaciones de cifrado por segundo puede realizar la máquina. Los resultados de estos cálculos se calculan a partir del archivo CSV y se guardan en el proyecto en un archivo llamado processor performance txt
+
+\end{document}

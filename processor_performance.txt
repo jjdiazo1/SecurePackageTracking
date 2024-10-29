@@ -1,0 +1,26 @@
+Processor Performance Estimation
+==============================
+Processor Speed: 2.5 GHz
+
+Symmetric Encryption Calculations:
+---------------------------------
+Total Symmetric Encryption Time (ns): 29091.70
+Average Symmetric Encryption Time (s): 0.000029091697
+Symmetric Encryption Operations per Second: 34374.07
+
+Asymmetric Encryption Calculations:
+-----------------------------------
+Total Asymmetric Encryption Time (ns): 203725.97
+Average Asymmetric Encryption Time (s): 0.000203725974
+Asymmetric Encryption Operations per Second: 4908.55
+
+Calculations Explained:
+------------------------
+1. Calculamos el tiempo promedio en nanosegundos sumando todos los tiempos
+   individuales de las operaciones y dividiéndolo entre la cantidad de operaciones.
+2. Convertimos el tiempo promedio de nanosegundos a segundos dividiendo por
+   1,000,000,000 para obtener el tiempo en segundos.
+3. Estimamos las operaciones por segundo tomando el inverso del tiempo promedio
+   en segundos (1 / tiempo_promedio_segundos).
+
+Nota: Estos cálculos se basan en los datos proporcionados en el archivo 'test_results.csv'.

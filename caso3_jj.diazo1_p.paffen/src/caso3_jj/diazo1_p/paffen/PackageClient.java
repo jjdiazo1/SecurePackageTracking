@@ -27,7 +27,7 @@ public class PackageClient {
         }
     }
 
-    private void readServerPublicKey() throws Exception {
+    public void readServerPublicKey() throws Exception {
         // Read public key
         byte[] publicKeyBytes = readKeyFromFile(SERVER_PUBLIC_KEY_FILE);
         X509EncodedKeySpec publicSpec = new X509EncodedKeySpec(publicKeyBytes);
