@@ -47,7 +47,7 @@ public class PackageClient {
     private void run() {
         try {
             Scanner scanner = new Scanner(System.in);
-            System.out.println("Seleccione el modo de operación: 1. Iterativo 2. Concurrente");
+            System.out.println("Seleccione el modo de operación: \n 1. Iterativo \n 2. Concurrente");
             int mode = scanner.nextInt();
             if (mode == 1) {
                 runIterative();
@@ -174,17 +174,18 @@ public class PackageClient {
             // Compute shared secret K = (G^x)^y mod p
             BigInteger sharedSecret = gx.modPow(y, p);
             byte[] sharedSecretBytes = sharedSecret.toByteArray();
-    
-            // Derive keys using SHA-512
+
+            // Compute digest SHA-512 of the master key
             MessageDigest sha512 = MessageDigest.getInstance("SHA-512");
             byte[] digest = sha512.digest(sharedSecretBytes);
-    
-            byte[] keyEncryption = Arrays.copyOfRange(digest, 0, 32); // 256 bits
-            byte[] keyHMAC = Arrays.copyOfRange(digest, 32, 64); // 256 bits
-    
+
+            // Split digest into two 32-byte keys
+            byte[] keyEncryption = Arrays.copyOfRange(digest, 0, 32); // First 256 bits
+            byte[] keyHMAC = Arrays.copyOfRange(digest, 32, 64); // Last 256 bits
+
             SecretKeySpec aesKey = new SecretKeySpec(keyEncryption, "AES");
             SecretKeySpec hmacKey = new SecretKeySpec(keyHMAC, "HmacSHA384");
-    
+
             // Step 12: Send IV to server
             byte[] ivBytes = new byte[16]; // 16 bytes IV
             random.nextBytes(ivBytes);

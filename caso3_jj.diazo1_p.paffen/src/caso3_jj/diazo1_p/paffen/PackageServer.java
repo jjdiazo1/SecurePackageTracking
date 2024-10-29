@@ -54,7 +54,7 @@ public class PackageServer {
             } else if ("2".equals(option)) {
                 // Read RSA keys from files
                 readRSAKeys();
-                System.out.println("Seleccione el modo de operación: 1. Iterativo 2. Concurrente");
+                System.out.println("Seleccione el modo de operación: \n 1. Iterativo \n 2. Concurrente");
                 String mode = reader.readLine();
                 if ("1".equals(mode)) {
                     startServerIterative();
@@ -75,11 +75,15 @@ public class PackageServer {
 
     private void initializePackageStates() {
         packageStates = new HashMap<>();
-        // Initialize 32 packages with states
+        Random rand = new Random();
+        int[] possibleStates = {ENOFICINA, RECOGIDO, ENCLASIFICACION, DESPACHADO, ENENTREGA, ENTREGADO};
+    
         for (int i = 0; i < 32; i++) {
-            packageStates.put("user" + i + ":pkg" + i, ENOFICINA);
+            int randomState = possibleStates[rand.nextInt(possibleStates.length)];
+            packageStates.put("user" + i + ":pkg" + i, randomState);
         }
     }
+    
 
     private void generateRSAKeys() throws Exception {
         // Generate RSA key pair
@@ -232,16 +236,17 @@ public class PackageServer {
             in.readFully(gyBytes);
             BigInteger gy = new BigInteger(gyBytes);
 
-            // Compute shared secret K = (G^y)^x mod p
+           // Compute shared secret K = (G^y)^x mod p
             BigInteger sharedSecret = gy.modPow(x, p);
             byte[] sharedSecretBytes = sharedSecret.toByteArray();
 
-            // Derive keys using SHA-512
+            // Compute digest SHA-512 of the master key
             MessageDigest sha512 = MessageDigest.getInstance("SHA-512");
             byte[] digest = sha512.digest(sharedSecretBytes);
 
-            byte[] keyEncryption = Arrays.copyOfRange(digest, 0, 32); // 256 bits
-            byte[] keyHMAC = Arrays.copyOfRange(digest, 32, 64); // 256 bits
+            // Split digest into two 32-byte keys
+            byte[] keyEncryption = Arrays.copyOfRange(digest, 0, 32); // First 256 bits
+            byte[] keyHMAC = Arrays.copyOfRange(digest, 32, 64); // Last 256 bits
 
             SecretKeySpec aesKey = new SecretKeySpec(keyEncryption, "AES");
             SecretKeySpec hmacKey = new SecretKeySpec(keyHMAC, "HmacSHA384");
@@ -400,19 +405,13 @@ public class PackageServer {
 
     // Diffie-Hellman parameters generation
     private static class DiffieHellman {
-        private static BigInteger p;
-        private static BigInteger g;
+    private static BigInteger p;
+    private static BigInteger g;
 
         static {
-            // Use predefined safe prime and generator
-            // p is a 1024-bit safe prime
-            p = new BigInteger("FCA682CE8E12CABA26EFCCF7110E526DB078B05EDE5D79FB" +
-                    "5DA8F7F4B0B3C8B3895828A6A2FEC74F" +
-                    "28D23E5A4735F8FCD4694F214" +
-                    "9DE6C3F9B4F1FE7FCE58" +
-                    "85", 16);
-
-            // g is 2
+            // Use p and g generated via OpenSSL
+            String pHex = "0098e60e1f707fc8f7b37f8ea5cee0b37d5b93664d19e31b7165ef3c8a8cef45acdecba4016aa0f960ffa2eb0f6a93def57aaacd9a2362bb37d075ad852018d371efa2600605fe465961c7d790f11985ec9f572cf08be42be7603ff5070d2612b4d56820b1c7a022ab96a9ee9aa57061725c02f610dafe9545bab3ec924b72d1bca7";
+            p = new BigInteger(pHex, 16);
             g = BigInteger.valueOf(2);
         }
 
