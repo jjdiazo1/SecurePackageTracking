@@ -1,4 +1,82 @@
-# SecurePackageTracking
+<img width="499" alt="image" src="https://github.com/user-attachments/assets/5e942d22-e709-4489-8d92-32f6959cb161"># SecurePackageTracking
+
+## UML
+
+```mermaid
+classDiagram
+    direction LR
+    class PackageClient {
+        - String SERVER_ADDRESS
+        - int SERVER_PORT
+        - String SERVER_PUBLIC_KEY_FILE
+        - PublicKey serverPublicKey
+        + main(String[] args)
+        + readServerPublicKey() : void
+        - readKeyFromFile(String filename) : byte[]
+        - run() : void
+        - runIterative() : void
+        - runConcurrent(int numDelegates) : void
+        + sendRequest(String uid, String packageId) : long[]
+    }
+
+    class PackageServer {
+        - int PORT
+        - String PRIVATE_KEY_FILE
+        - String PUBLIC_KEY_FILE
+        - ServerSocket serverSocket
+        - Map<String, Integer> packageStates
+        - PrivateKey privateKey
+        - PublicKey publicKey
+        + PackageServer()
+        + main(String[] args)
+        - run() : void
+        - initializePackageStates() : void
+        - generateRSAKeys() : void
+        - readRSAKeys() : void
+        + startServerIterative() : void
+        + startServerConcurrent(int numThreads) : void
+        + stopServer() : void
+        - handleClient(Socket clientSocket) : void
+        - getStateString(int state) : String
+        - saveKeyToFile(String filename, byte[] keyBytes) : void
+        - readKeyFromFile(String filename) : byte[]
+    }
+
+    class DiffieHellman {
+        + BigInteger getP() : BigInteger
+        + BigInteger getG() : BigInteger
+    }
+
+    class ProcessorPerformanceEstimator {
+        + estimateAndWriteToFile() : void
+        - calculateAverage(List<Long> times) : double
+        - getProcessorSpeed() : String
+    }
+
+    class Test {
+        - int[] THREAD_COUNTS
+        - int ITERATIVE_REQUESTS
+        - String CSV_FILE
+        + main(String[] args)
+        - runIterativeScenario(PrintWriter writer) : void
+        - runConcurrentScenario(PrintWriter writer, int threadCount) : void
+        - collectTimingData(PrintWriter writer, String scenario) : void
+        - estimateProcessorPerformance() : void
+    }
+
+    PackageClient --> PackageServer : interacts with
+    PackageServer ..> DiffieHellman : uses
+    PackageServer ..> ProcessorPerformanceEstimator : uses
+    Test --> PackageClient : uses
+    Test --> PackageServer : uses
+    Test ..> ProcessorPerformanceEstimator : uses
+
+    style PackageClient fill:#d3d3d3
+    style PackageServer fill:#d3d3d3
+    style DiffieHellman fill:#d3d3d3
+    style ProcessorPerformanceEstimator fill:#d3d3d3
+    style Test fill:#d3d3d3
+```
 
 ## Protocol
 Handling Client Connections
