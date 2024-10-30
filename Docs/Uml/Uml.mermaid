@@ -1,0 +1,73 @@
+classDiagram
+    direction LR
+    class ClientePaquete {
+        - String DIRECCION_SERVIDOR
+        - int PUERTO_SERVIDOR
+        - String ARCHIVO_CLAVE_PUBLICA_SERVIDOR
+        - PublicKey clavePublicaServidor
+        + main(String[] args)
+        + leerClavePublicaServidor() : void
+        - leerClaveDesdeArchivo(String nombreArchivo) : byte[]
+        - ejecutar() : void
+        - ejecutarIterativo() : void
+        - ejecutarConcurrente(int numDelegados) : void
+        + enviarSolicitud(String uid, String idPaquete) : long[]
+    }
+
+    class ServidorPaquete {
+        - int PUERTO
+        - String ARCHIVO_CLAVE_PRIVADA
+        - String ARCHIVO_CLAVE_PUBLICA
+        - ServerSocket socketServidor
+        - Map<String, Integer> estadosPaquete
+        - PrivateKey clavePrivada
+        - PublicKey clavePublica
+        + ServidorPaquete()
+        + main(String[] args)
+        - ejecutar() : void
+        - inicializarEstadosPaquete() : void
+        - generarClavesRSA() : void
+        - leerClavesRSA() : void
+        + iniciarServidorIterativo() : void
+        + iniciarServidorConcurrente(int numHilos) : void
+        + detenerServidor() : void
+        - manejarCliente(Socket socketCliente) : void
+        - obtenerEstadoComoString(int estado) : String
+        - guardarClaveEnArchivo(String nombreArchivo, byte[] claveBytes) : void
+        - leerClaveDesdeArchivo(String nombreArchivo) : byte[]
+    }
+
+    class DiffieHellman {
+        + BigInteger obtenerP() : BigInteger
+        + BigInteger obtenerG() : BigInteger
+    }
+
+    class EstimadorRendimientoProcesador {
+        + estimarYEscribirEnArchivo() : void
+        - calcularPromedio(List<Long> tiempos) : double
+        - obtenerVelocidadProcesador() : String
+    }
+
+    class Prueba {
+        - int[] CUENTAS_HILOS
+        - int SOLICITUDES_ITERATIVAS
+        - String ARCHIVO_CSV
+        + main(String[] args)
+        - ejecutarEscenarioIterativo(PrintWriter escritor) : void
+        - ejecutarEscenarioConcurrente(PrintWriter escritor, int cantidadHilos) : void
+        - recolectarDatosDeTiempos(PrintWriter escritor, String escenario) : void
+        - estimarRendimientoProcesador() : void
+    }
+
+    ClientePaquete --> ServidorPaquete : interactúa con
+    ServidorPaquete ..> DiffieHellman : utiliza
+    ServidorPaquete ..> EstimadorRendimientoProcesador : utiliza
+    Prueba --> ClientePaquete : utiliza
+    Prueba --> ServidorPaquete : utiliza
+    Prueba ..> EstimadorRendimientoProcesador : utiliza
+
+    style ClientePaquete fill:#d3d3d3
+    style ServidorPaquete fill:#d3d3d3
+    style DiffieHellman fill:#d3d3d3
+    style EstimadorRendimientoProcesador fill:#d3d3d3
+    style Prueba fill:#d3d3d3
