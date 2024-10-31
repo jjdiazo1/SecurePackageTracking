@@ -12,20 +12,20 @@ public class Test {
     public static void main(String[] args) {
         try {
             PrintWriter writer = new PrintWriter(new FileWriter(CSV_FILE));
-            writer.println("Scenario,Operation,Time(ns)");
+            writer.println("Escenario,Operación,Tiempo(ns)");
 
-            // Run iterative scenario
+            // Ejecutar escenario iterativo
             runIterativeScenario(writer);
 
-            // Run concurrent scenarios
+            // Ejecutar escenarios concurrentes
             for (int threadCount : THREAD_COUNTS) {
                 runConcurrentScenario(writer, threadCount);
             }
 
             writer.close();
-            System.out.println("Test results saved to " + CSV_FILE);
+            System.out.println("Resultados de la prueba guardados en " + CSV_FILE);
 
-            // Estimate processor speed and encryption operations per second
+            // Estimar la velocidad del procesador y las operaciones de cifrado por segundo
             estimateProcessorPerformance();
 
         } catch (Exception e) {
@@ -34,7 +34,7 @@ public class Test {
     }
 
     private static void runIterativeScenario(PrintWriter writer) throws Exception {
-        System.out.println("Running iterative scenario...");
+        System.out.println("Ejecutando escenario iterativo...");
         PackageServer server = new PackageServer();
         ExecutorService serverExecutor = Executors.newSingleThreadExecutor();
         serverExecutor.submit(() -> {
@@ -45,23 +45,23 @@ public class Test {
             }
         });
     
-        Thread.sleep(1000); // Wait for server to start
+        Thread.sleep(1000); // Esperar a que el servidor inicie
     
         PackageClient client = new PackageClient();
-        client.readServerPublicKey(); // Add this line
+        client.readServerPublicKey(); // Agregar esta línea
         for (int i = 0; i < ITERATIVE_REQUESTS; i++) {
             client.sendRequest("user" + i, "pkg" + i);
         }
     
         serverExecutor.shutdownNow();
-        server.stopServer(); // Add this line
+        server.stopServer(); // Agregar esta línea
     
-        // Collect timing data
+        // Recopilar datos de tiempo
         collectTimingData(writer, "Iterative");
     }
 
     private static void runConcurrentScenario(PrintWriter writer, int threadCount) throws Exception {
-        System.out.println("Running concurrent scenario with " + threadCount + " threads...");
+        System.out.println("Ejecutando escenario concurrente con " + threadCount + " hilos...");
         PackageServer server = new PackageServer();
         ExecutorService serverExecutor = Executors.newSingleThreadExecutor();
         serverExecutor.submit(() -> {
@@ -72,7 +72,7 @@ public class Test {
             }
         });
     
-        Thread.sleep(1000); // Wait for server to start
+        Thread.sleep(1000); // Esperar a que el servidor inicie
     
         ExecutorService clientExecutor = Executors.newFixedThreadPool(threadCount);
         for (int i = 0; i < threadCount; i++) {
@@ -80,7 +80,7 @@ public class Test {
             clientExecutor.submit(() -> {
                 PackageClient client = new PackageClient();
                 try {
-                    client.readServerPublicKey(); // Add this line
+                    client.readServerPublicKey(); // Agregar esta línea
                     client.sendRequest("user" + index, "pkg" + index);
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -92,45 +92,45 @@ public class Test {
         clientExecutor.awaitTermination(5, TimeUnit.MINUTES);
     
         serverExecutor.shutdownNow();
-        server.stopServer(); // Add this line
+        server.stopServer(); // Agregar esta línea
     
-        // Wait for all requests to complete
+        // Esperar a que todas las solicitudes se completen
         Thread.sleep(5000);
     
-        // Collect timing data
+        // Recopilar datos de tiempo
         collectTimingData(writer, "Concurrent-" + threadCount);
     }
     
 
     private static void collectTimingData(PrintWriter writer, String scenario) {
-        // Since the data is in the server's static queues, we can access them directly
+        // Dado que los datos están en las colas estáticas del servidor, podemos acceder a ellos directamente
 
         Iterator<Long> challengeIter = PackageServer.challengeResponseTimes.iterator();
         while (challengeIter.hasNext()) {
-            writer.println(scenario + ",ChallengeResponseTime," + challengeIter.next());
+            writer.println(scenario + ",TiempoDeRespuestaDesafío," + challengeIter.next());
         }
 
         Iterator<Long> dhIter = PackageServer.dhGenerationTimes.iterator();
         while (dhIter.hasNext()) {
-            writer.println(scenario + ",DHGenerationTime," + dhIter.next());
+            writer.println(scenario + ",TiempoDeGeneraciónDH," + dhIter.next());
         }
 
         Iterator<Long> verificationIter = PackageServer.verificationTimes.iterator();
         while (verificationIter.hasNext()) {
-            writer.println(scenario + ",VerificationTime," + verificationIter.next());
+            writer.println(scenario + ",TiempoDeVerificación," + verificationIter.next());
         }
 
         Iterator<Long> symmetricIter = PackageServer.symmetricEncryptionTimes.iterator();
         while (symmetricIter.hasNext()) {
-            writer.println(scenario + ",SymmetricEncryptionTime," + symmetricIter.next());
+            writer.println(scenario + ",TiempoDeCifradoSimétrico," + symmetricIter.next());
         }
 
         Iterator<Long> asymmetricIter = PackageServer.asymmetricEncryptionTimes.iterator();
         while (asymmetricIter.hasNext()) {
-            writer.println(scenario + ",AsymmetricEncryptionTime," + asymmetricIter.next());
+            writer.println(scenario + ",TiempoDeCifradoAsimétrico," + asymmetricIter.next());
         }
 
-        // Clear the queues for the next scenario
+        // Limpiar las colas para el siguiente escenario
         PackageServer.challengeResponseTimes.clear();
         PackageServer.dhGenerationTimes.clear();
         PackageServer.verificationTimes.clear();
@@ -139,8 +139,8 @@ public class Test {
     }
 
     private static void estimateProcessorPerformance() {
-        // Implement the calculation of processor speed and encryption operations per second
-        // Write the results to a text file
-        ProcessorPerformanceEstimator.estimateAndWriteToFile();
+        // Implementar el cálculo de la velocidad del procesador y las operaciones de cifrado por segundo
+        // Escribir los resultados en un archivo de texto
+        RendimientoProcesador.estimarYEscribirEnArchivo();
     }
 }
