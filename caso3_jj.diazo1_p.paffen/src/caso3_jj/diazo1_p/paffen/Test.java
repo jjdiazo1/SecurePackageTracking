@@ -50,13 +50,13 @@ public class Test {
         Thread.sleep(1000); // Esperar a que el servidor inicie
     
         PackageClient client = new PackageClient();
-        client.readServerPublicKey(); // Agregar esta línea
+        client.readServerPublicKey(); 
         for (int i = 0; i < ITERATIVE_REQUESTS; i++) {
             client.sendRequest("user" + i, "pkg" + i);
         }
     
         serverExecutor.shutdownNow();
-        server.stopServer(); // Agregar esta línea
+        server.stopServer();
     
         // Recopilar datos de tiempo
         collectTimingData(writer, "Iterative");
@@ -94,7 +94,7 @@ public class Test {
         clientExecutor.awaitTermination(5, TimeUnit.MINUTES);
     
         serverExecutor.shutdownNow();
-        server.stopServer(); // Agregar esta línea
+        server.stopServer();
     
         // Esperar a que todas las solicitudes se completen
         Thread.sleep(5000);
