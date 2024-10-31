@@ -141,6 +141,6 @@ public class Test {
     private static void estimateProcessorPerformance() {
         // Implementar el cálculo de la velocidad del procesador y las operaciones de cifrado por segundo
         // Escribir los resultados en un archivo de texto
-        RendimientoProcesador.estimarYEscribirEnArchivo();
+        ProcessorPerformanceEstimator.estimateAndWriteToFile();
     }
 }
