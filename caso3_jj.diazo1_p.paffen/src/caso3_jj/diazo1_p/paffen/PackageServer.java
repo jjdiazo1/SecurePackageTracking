@@ -3,10 +3,13 @@ package caso3_jj.diazo1_p.paffen;
 import java.io.*;
 import java.math.BigInteger;
 import java.net.*;
+import java.nio.file.Paths;
 import java.security.*;
 import java.security.spec.*;
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import javax.crypto.*;
 import javax.crypto.spec.*;
 
@@ -160,13 +163,20 @@ public class PackageServer {
     public void startServerConcurrent(int numThreads) throws IOException {
         serverSocket = new ServerSocket(PORT);
         System.out.println("Servidor concurrente iniciado en el puerto " + PORT);
-
+    
         ExecutorService executor = Executors.newFixedThreadPool(numThreads);
-
+    
         try {
             while (!Thread.currentThread().isInterrupted()) {
                 Socket clientSocket = serverSocket.accept();
-                executor.execute(() -> handleClient(clientSocket));
+                executor.execute(() -> {
+                    try {
+                        BigInteger[] dhParams = generateDiffieHellmanParameters();
+                        handleClient(clientSocket, dhParams[0], dhParams[1]);
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                });
             }
         } catch (IOException e) {
             // Handle exception
@@ -189,10 +199,10 @@ public class PackageServer {
         }
     }
 
-    private void handleClient(Socket clientSocket) {
+    private void handleClient(Socket clientSocket, BigInteger p, BigInteger g) {
         try (DataInputStream in = new DataInputStream(clientSocket.getInputStream());
              DataOutputStream out = new DataOutputStream(clientSocket.getOutputStream())) {
-
+    
             // Step 1: Receive "SECINIT" from client
             String secInit = in.readUTF();
             if (!"SECINIT".equals(secInit)) {
@@ -200,29 +210,28 @@ public class PackageServer {
                 clientSocket.close();
                 return;
             }
-
+    
             // Step 2b: Receive encrypted challenge R from client
             int encryptedChallengeLength = in.readInt();
             byte[] encryptedChallenge = new byte[encryptedChallengeLength];
             in.readFully(encryptedChallenge);
-
+    
             // Step 3: Decrypt R to get Reto
             long startTimeChallenge = System.nanoTime();
-
+    
             Cipher rsaCipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
             rsaCipher.init(Cipher.DECRYPT_MODE, privateKey);
             byte[] retoBytes = rsaCipher.doFinal(encryptedChallenge);
             String reto = new String(retoBytes);
-
+    
             long endTimeChallenge = System.nanoTime();
             long timeToDecryptChallenge = endTimeChallenge - startTimeChallenge;
-
-
+    
             // Step 4: Send Rta (Reto) back to client
             out.writeInt(retoBytes.length);
             out.write(retoBytes);
             out.flush();
-
+    
             // Step 5: Receive "OK" or "ERROR" from client
             String authStatus = in.readUTF();
             if (!"OK".equals(authStatus)) {
@@ -230,28 +239,24 @@ public class PackageServer {
                 clientSocket.close();
                 return;
             }
-
+    
             // Step 7: Generate Diffie-Hellman parameters G, P, G^x
             long startTimeDH = System.nanoTime();
-
-            // Generate p and g
-            BigInteger p = DiffieHellman.getP();
-            BigInteger g = DiffieHellman.getG();
-
+    
             // Generate private exponent x and compute G^x mod p
             SecureRandom random = new SecureRandom();
             BigInteger x = new BigInteger(1024, random);
             BigInteger gx = g.modPow(x, p);
-
+    
             long endTimeDH = System.nanoTime();
             long timeToGenerateDH = endTimeDH - startTimeDH;
-
+    
             // Step 8: Send G, P, G^x and signature to client
             // Serialize parameters
             byte[] gBytes = g.toByteArray();
             byte[] pBytes = p.toByteArray();
             byte[] gxBytes = gx.toByteArray();
-
+    
             // Sign the parameters
             Signature signature = Signature.getInstance("SHA1withRSA");
             signature.initSign(privateKey);
@@ -259,21 +264,21 @@ public class PackageServer {
             signature.update(pBytes);
             signature.update(gxBytes);
             byte[] sigBytes = signature.sign();
-
+    
             // Send lengths and data
             out.writeInt(gBytes.length);
             out.write(gBytes);
-
+    
             out.writeInt(pBytes.length);
             out.write(pBytes);
-
+    
             out.writeInt(gxBytes.length);
             out.write(gxBytes);
-
+    
             out.writeInt(sigBytes.length);
             out.write(sigBytes);
             out.flush();
-
+    
             // Step 10: Receive "OK" or "ERROR" from client
             String dhStatus = in.readUTF();
             if (!"OK".equals(dhStatus)) {
@@ -281,49 +286,49 @@ public class PackageServer {
                 clientSocket.close();
                 return;
             }
-
+    
             // Step 11b: Compute shared secret and derive keys
             // Receive G^y from client
             int gyLength = in.readInt();
             byte[] gyBytes = new byte[gyLength];
             in.readFully(gyBytes);
             BigInteger gy = new BigInteger(gyBytes);
-
-           // Compute shared secret K = (G^y)^x mod p
+    
+            // Compute shared secret K = (G^y)^x mod p
             BigInteger sharedSecret = gy.modPow(x, p);
             byte[] sharedSecretBytes = sharedSecret.toByteArray();
-
+    
             // Compute digest SHA-512 of the master key
             MessageDigest sha512 = MessageDigest.getInstance("SHA-512");
             byte[] digest = sha512.digest(sharedSecretBytes);
-
+    
             // Split digest into two 32-byte keys
             byte[] keyEncryption = Arrays.copyOfRange(digest, 0, 32); // First 256 bits
             byte[] keyHMAC = Arrays.copyOfRange(digest, 32, 64); // Last 256 bits
-
+    
             SecretKeySpec aesKey = new SecretKeySpec(keyEncryption, "AES");
             SecretKeySpec hmacKey = new SecretKeySpec(keyHMAC, "HmacSHA384");
-
+    
             // Step 12: Receive IV from client
             int ivLength = in.readInt();
             byte[] ivBytes = new byte[ivLength];
             in.readFully(ivBytes);
             IvParameterSpec ivSpec = new IvParameterSpec(ivBytes);
-
+    
             // Prepare AES cipher
             Cipher aesCipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
             Mac hmac = Mac.getInstance("HmacSHA384");
             hmac.init(hmacKey);
-
+    
             // Step 13: Receive encrypted uid and HMAC
             int encUidLength = in.readInt();
             byte[] encUid = new byte[encUidLength];
             in.readFully(encUid);
-
+    
             int hmacUidLength = in.readInt();
             byte[] hmacUid = new byte[hmacUidLength];
             in.readFully(hmacUid);
-
+    
             // Verify HMAC
             byte[] computedHmacUid = hmac.doFinal(encUid);
             if (!Arrays.equals(hmacUid, computedHmacUid)) {
@@ -331,21 +336,21 @@ public class PackageServer {
                 clientSocket.close();
                 return;
             }
-
+    
             // Decrypt uid
             aesCipher.init(Cipher.DECRYPT_MODE, aesKey, ivSpec);
             byte[] uidBytes = aesCipher.doFinal(encUid);
             String uid = new String(uidBytes);
-
+    
             // Step 14: Receive encrypted package_id and HMAC
             int encPkgIdLength = in.readInt();
             byte[] encPkgId = new byte[encPkgIdLength];
             in.readFully(encPkgId);
-
+    
             int hmacPkgIdLength = in.readInt();
             byte[] hmacPkgId = new byte[hmacPkgIdLength];
             in.readFully(hmacPkgId);
-
+    
             // Verify HMAC
             byte[] computedHmacPkgId = hmac.doFinal(encPkgId);
             if (!Arrays.equals(hmacPkgId, computedHmacPkgId)) {
@@ -353,87 +358,90 @@ public class PackageServer {
                 clientSocket.close();
                 return;
             }
-
+    
             // Decrypt package_id
             byte[] pkgIdBytes = aesCipher.doFinal(encPkgId);
             String packageId = new String(pkgIdBytes);
-
+    
             // Step 15: Verify and respond
             long startTimeVerify = System.nanoTime();
-
+    
             String key = uid + ":" + packageId;
             int state = packageStates.getOrDefault(key, DESCONOCIDO);
-
+    
             long endTimeVerify = System.nanoTime();
             long timeToVerify = endTimeVerify - startTimeVerify;
-
+    
             // Convert state to string
             String stateString = getStateString(state);
             byte[] stateBytes = stateString.getBytes();
-
+    
             // Step 16: Send encrypted state and HMAC
             aesCipher.init(Cipher.ENCRYPT_MODE, aesKey, ivSpec);
             byte[] encState = aesCipher.doFinal(stateBytes);
             byte[] hmacState = hmac.doFinal(encState);
-
+    
             out.writeInt(encState.length);
             out.write(encState);
-
+    
             out.writeInt(hmacState.length);
             out.write(hmacState);
             out.flush();
-
+    
             // Step 18: Terminate
             clientSocket.close();
-
+    
             // Record timings
             // You can save the timings to a file or a data structure for later analysis
             System.out.println("Tiempo para descifrar el reto: " + timeToDecryptChallenge + " ns");
             System.out.println("Tiempo para generar G, P, G^x: " + timeToGenerateDH + " ns");
             System.out.println("Tiempo para verificar la consulta: " + timeToVerify + " ns");
-
+    
             // Additional: Measure time to encrypt state with RSA (for comparison)
             long startTimeAsymmetricEncryption = System.nanoTime();
-
+    
             Cipher rsaCipherEncrypt = Cipher.getInstance("RSA/ECB/PKCS1Padding");
             rsaCipherEncrypt.init(Cipher.ENCRYPT_MODE, publicKey); // Use server's public key
             byte[] encryptedStateAsymmetric = rsaCipherEncrypt.doFinal(stateBytes);
-
+    
             long endTimeAsymmetricEncryption = System.nanoTime();
             long timeToEncryptStateAsymmetric = endTimeAsymmetricEncryption - startTimeAsymmetricEncryption;
-
+    
             System.out.println("Tiempo para cifrar el estado con cifrado asimétrico: " + timeToEncryptStateAsymmetric + " ns");
-
+    
             // Similarly, measure time to encrypt with symmetric cipher
             long startTimeSymmetricEncryption = System.nanoTime();
-
+    
             aesCipher.init(Cipher.ENCRYPT_MODE, aesKey, ivSpec);
             aesCipher.doFinal(stateBytes);
-
+    
             long endTimeSymmetricEncryption = System.nanoTime();
             long timeToEncryptStateSymmetric = endTimeSymmetricEncryption - startTimeSymmetricEncryption;
-
+    
             System.out.println("Tiempo para cifrar el estado con cifrado simétrico: " + timeToEncryptStateSymmetric + " ns");
-
+    
             // After measuring timeToDecryptChallenge
             challengeResponseTimes.add(timeToDecryptChallenge);
-
+    
             // After measuring timeToGenerateDH
             dhGenerationTimes.add(timeToGenerateDH);
-
+    
             // After measuring timeToVerify
             verificationTimes.add(timeToVerify);
-
+    
             // After measuring timeToEncryptStateSymmetric
             symmetricEncryptionTimes.add(timeToEncryptStateSymmetric);
-
+    
             // After measuring timeToEncryptStateAsymmetric
             asymmetricEncryptionTimes.add(timeToEncryptStateAsymmetric);
-
-
+    
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    private void handleClient(Socket clientSocket) {
+        handleClient(clientSocket, DiffieHellman.getP(), DiffieHellman.getG());
     }
 
     private String getStateString(int state) {
@@ -471,9 +479,10 @@ public class PackageServer {
     }
 
     // Diffie-Hellman parameters generation
+    // Diffie-Hellman parameters generation for iterative mode
     private static class DiffieHellman {
-    private static BigInteger p;
-    private static BigInteger g;
+        private static BigInteger p;
+        private static BigInteger g;
 
         static {
             // Use p and g generated via OpenSSL
@@ -490,4 +499,49 @@ public class PackageServer {
             return g;
         }
     }
+
+    private BigInteger[] generateDiffieHellmanParameters() throws Exception {
+        String opensslPath = Paths.get("OpenSSL-1.1.1h_win32", "OpenSSL-1.1.1h_win32", "openssl.exe").toString();
+        ProcessBuilder processBuilder = new ProcessBuilder(opensslPath, "dhparam", "-text", "1024");
+        processBuilder.redirectErrorStream(true);
+        Process process = processBuilder.start();
+    
+        BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+        StringBuilder output = new StringBuilder();
+        String line;
+        while ((line = reader.readLine()) != null) {
+            output.append(line).append("\n");
+        }
+        reader.close();
+        process.waitFor();
+    
+        // Parse the output to extract p
+        Pattern pPattern = Pattern.compile("prime\\s*:\\s*([0-9A-Fa-f:\\s]+)");
+        Matcher pMatcher = pPattern.matcher(output);
+    
+        BigInteger p = null;
+        BigInteger g = null;
+    
+        if (pMatcher.find()) {
+            String pHex = pMatcher.group(1).replaceAll("[^0-9A-Fa-f]", ""); // Remove non-hex characters
+            p = new BigInteger(pHex, 16);
+        }
+    
+        // Generate a random value for g
+        SecureRandom random = new SecureRandom();
+        g = BigInteger.valueOf(random.nextInt(100) + 2); // Random value between 2 and 101
+    
+        // Verify that p and g are valid
+        if (p == null || g == null || p.signum() <= 0 || g.signum() <= 0) {
+            System.out.println("Output from OpenSSL: " + output.toString());
+            throw new IllegalArgumentException("Invalid Diffie-Hellman parameters generated");
+        }
+    
+        // Print p and g to verify they are changing
+        System.out.println("Generated Diffie-Hellman parameters:");
+        System.out.println("p: " + p.toString(16));
+        System.out.println("g: " + g.toString(16));
+    
+        return new BigInteger[]{p, g};
+    }  
 }

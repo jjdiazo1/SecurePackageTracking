@@ -1,17 +1,19 @@
 package caso3_jj.diazo1_p.paffen;
 
 import java.io.*;
+import java.nio.file.*;
 import java.util.*;
 import java.util.concurrent.*;
 
 public class Test {
     private static final int[] THREAD_COUNTS = {4, 8, 32};
     private static final int ITERATIVE_REQUESTS = 32;
-    private static final String CSV_FILE = "test_results.csv";
+    private static final Path CSV_FILE = Paths.get("Auxiliar", "test_results.csv");
 
     public static void main(String[] args) {
         try {
-            PrintWriter writer = new PrintWriter(new FileWriter(CSV_FILE));
+            Files.createDirectories(CSV_FILE.getParent()); // Crear directorios si no existen
+            PrintWriter writer = new PrintWriter(new FileWriter(CSV_FILE.toFile()));
             writer.println("Escenario,Operación,Tiempo(ns)");
 
             // Ejecutar escenario iterativo
@@ -23,7 +25,7 @@ public class Test {
             }
 
             writer.close();
-            System.out.println("Resultados de la prueba guardados en " + CSV_FILE);
+            System.out.println("Resultados de la prueba guardados en " + CSV_FILE.toAbsolutePath());
 
             // Estimar la velocidad del procesador y las operaciones de cifrado por segundo
             estimateProcessorPerformance();
