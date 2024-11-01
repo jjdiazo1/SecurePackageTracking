@@ -4,15 +4,15 @@ Velocidad del Procesador: 3 GHz
 
 Cálculos de Cifrado Simétrico:
 ---------------------------------
-Tiempo Total de Cifrado Simétrico (ns): 58864,47
-Tiempo Promedio de Cifrado Simétrico (s): 0,000058864474
-Operaciones de Cifrado Simétrico por Segundo: 16988,18
+Tiempo Total de Cifrado Simétrico (ns): 44032,89
+Tiempo Promedio de Cifrado Simétrico (s): 0,000044032895
+Operaciones de Cifrado Simétrico por Segundo: 22710,29
 
 Cálculos de Cifrado Asimétrico:
 -----------------------------------
-Tiempo Total de Cifrado Asimétrico (ns): 368842,11
-Tiempo Promedio de Cifrado Asimétrico (s): 0,000368842105
-Operaciones de Cifrado Asimétrico por Segundo: 2711,19
+Tiempo Total de Cifrado Asimétrico (ns): 258907,89
+Tiempo Promedio de Cifrado Asimétrico (s): 0,000258907895
+Operaciones de Cifrado Asimétrico por Segundo: 3862,38
 
 Explicación de los Cálculos:
 ----------------------------
