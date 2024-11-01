@@ -1,14 +1,18 @@
 package caso3_jj.diazo1_p.paffen;
 
 import java.io.*;
+import java.nio.file.*;
 import java.util.*;
 
 public class ProcessorPerformanceEstimator {
+    private static final Path CSV_FILE = Paths.get("Auxiliar", "test_results.csv");
+    private static final Path OUTPUT_FILE = Paths.get("Auxiliar", "processor_performance.txt");
+
     public static void estimateAndWriteToFile() {
         try {
             // Leer los datos de tiempos desde test_results.csv
             Map<String, List<Long>> dataMap = new HashMap<>();
-            BufferedReader reader = new BufferedReader(new FileReader("test_results.csv"));
+            BufferedReader reader = new BufferedReader(new FileReader(CSV_FILE.toFile()));
             String line;
             reader.readLine(); // Saltar la cabecera
 
@@ -22,8 +26,8 @@ public class ProcessorPerformanceEstimator {
             reader.close();
 
             // Calcular los tiempos promedio para cifrado simétrico y asimétrico
-            double avgSymmetricTimeNs = calculateAverage(dataMap.get("SymmetricEncryptionTime"));
-            double avgAsymmetricTimeNs = calculateAverage(dataMap.get("AsymmetricEncryptionTime"));
+            double avgSymmetricTimeNs = calculateAverage(dataMap.get("TiempoDeCifradoSimétrico"));
+            double avgAsymmetricTimeNs = calculateAverage(dataMap.get("TiempoDeCifradoAsimétrico"));
 
             // Convertir de nanosegundos a segundos para los cálculos de operaciones por segundo
             double avgSymmetricTimeSec = avgSymmetricTimeNs / 1_000_000_000.0;
@@ -37,7 +41,7 @@ public class ProcessorPerformanceEstimator {
             String processorSpeed = getProcessorSpeed();
 
             // Escribir los resultados y cálculos paso a paso en el archivo
-            PrintWriter writer = new PrintWriter(new FileWriter("processor_performance.txt"));
+            PrintWriter writer = new PrintWriter(new FileWriter(OUTPUT_FILE.toFile()));
             writer.println("Estimación de Rendimiento del Procesador");
             writer.println("=======================================");
             writer.println("Velocidad del Procesador: " + processorSpeed);
@@ -70,7 +74,7 @@ public class ProcessorPerformanceEstimator {
             
             writer.close();
 
-            System.out.println("Estimación de rendimiento del procesador guardada en processor_performance.txt");
+            System.out.println("Estimación de rendimiento del procesador guardada en " + OUTPUT_FILE.toAbsolutePath());
 
         } catch (Exception e) {
             e.printStackTrace();

@@ -28,7 +28,7 @@ public class PackageClient {
     }
 
     public void readServerPublicKey() throws Exception {
-        // Read public key
+        // Leer llave pública del servidor
         byte[] publicKeyBytes = readKeyFromFile(SERVER_PUBLIC_KEY_FILE);
         X509EncodedKeySpec publicSpec = new X509EncodedKeySpec(publicKeyBytes);
         KeyFactory keyFactory = KeyFactory.getInstance("RSA");
@@ -86,33 +86,33 @@ public class PackageClient {
             DataInputStream in = new DataInputStream(socket.getInputStream());
             DataOutputStream out = new DataOutputStream(socket.getOutputStream());
     
-            // Step 1: Send "SECINIT" to server
+            // Paso 1: Enviar "SECINIT" al servidor
             out.writeUTF("SECINIT");
             out.flush();
     
-            // Step 2a: Generate random challenge (Reto)
+            // Paso 2a: Generar desafío aleatorio (Reto)
             SecureRandom random = new SecureRandom();
-            byte[] retoBytes = new byte[16]; // 16 bytes challenge
+            byte[] retoBytes = new byte[16]; // Desafío de 16 bytes
             random.nextBytes(retoBytes);
             String reto = Base64.getEncoder().encodeToString(retoBytes);
     
-            // Encrypt Reto with server's public key
+            // Cifrar Reto con la llave pública del servidor
             Cipher rsaCipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
             rsaCipher.init(Cipher.ENCRYPT_MODE, serverPublicKey);
             byte[] encryptedReto = rsaCipher.doFinal(reto.getBytes());
     
-            // Step 2b: Send encrypted Reto (R) to server
+            // Paso 2b: Enviar Reto cifrado (R) al servidor
             out.writeInt(encryptedReto.length);
             out.write(encryptedReto);
             out.flush();
     
-            // Step 4: Receive Rta from server
+            // Paso 4: Recibir Rta del servidor
             int rtaLength = in.readInt();
             byte[] rtaBytes = new byte[rtaLength];
             in.readFully(rtaBytes);
             String rta = new String(rtaBytes);
     
-            // Step 5: Verify Rta == Reto
+            // Paso 5: Verificar que Rta == Reto
             if (!reto.equals(rta)) {
                 System.out.println("Autenticación del servidor fallida.");
                 out.writeUTF("ERROR");
@@ -123,7 +123,7 @@ public class PackageClient {
                 out.flush();
             }
     
-            // Step 8: Receive G, P, G^x and signature from server
+            // Paso 8: Recibir G, P, G^x y firma del servidor
             int gLength = in.readInt();
             byte[] gBytes = new byte[gLength];
             in.readFully(gBytes);
@@ -143,7 +143,7 @@ public class PackageClient {
             byte[] sigBytes = new byte[sigLength];
             in.readFully(sigBytes);
     
-            // Step 9: Verify signature
+            // Paso 9: Verificar firma
             Signature signature = Signature.getInstance("SHA1withRSA");
             signature.initVerify(serverPublicKey);
             signature.update(gBytes);
@@ -160,34 +160,34 @@ public class PackageClient {
                 out.flush();
             }
     
-            // Step 11a: Compute G^y and derive keys
+            // Paso 11a: Calcular G^y y derivar llaves
             SecureRandom randomY = new SecureRandom();
             BigInteger y = new BigInteger(1024, randomY);
             BigInteger gy = g.modPow(y, p);
     
-            // Send G^y to server
+            // Enviar G^y al servidor
             byte[] gyBytes = gy.toByteArray();
             out.writeInt(gyBytes.length);
             out.write(gyBytes);
             out.flush();
     
-            // Compute shared secret K = (G^x)^y mod p
+            // Calcular secreto compartido K = (G^x)^y mod p
             BigInteger sharedSecret = gx.modPow(y, p);
             byte[] sharedSecretBytes = sharedSecret.toByteArray();
-
-            // Compute digest SHA-512 of the master key
+    
+            // Calcular digest SHA-512 de la llave maestra
             MessageDigest sha512 = MessageDigest.getInstance("SHA-512");
             byte[] digest = sha512.digest(sharedSecretBytes);
-
-            // Split digest into two 32-byte keys
-            byte[] keyEncryption = Arrays.copyOfRange(digest, 0, 32); // First 256 bits
-            byte[] keyHMAC = Arrays.copyOfRange(digest, 32, 64); // Last 256 bits
-
+    
+            // Dividir digest en dos llaves de 32 bytes
+            byte[] keyEncryption = Arrays.copyOfRange(digest, 0, 32); // Primeros 256 bits
+            byte[] keyHMAC = Arrays.copyOfRange(digest, 32, 64); // Últimos 256 bits
+    
             SecretKeySpec aesKey = new SecretKeySpec(keyEncryption, "AES");
             SecretKeySpec hmacKey = new SecretKeySpec(keyHMAC, "HmacSHA384");
-
-            // Step 12: Send IV to server
-            byte[] ivBytes = new byte[16]; // 16 bytes IV
+    
+            // Paso 12: Enviar IV al servidor
+            byte[] ivBytes = new byte[16]; // IV de 16 bytes
             random.nextBytes(ivBytes);
             IvParameterSpec ivSpec = new IvParameterSpec(ivBytes);
     
@@ -195,12 +195,12 @@ public class PackageClient {
             out.write(ivBytes);
             out.flush();
     
-            // Prepare AES cipher
+            // Preparar cifrador AES
             Cipher aesCipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
             Mac hmac = Mac.getInstance("HmacSHA384");
             hmac.init(hmacKey);
     
-            // Step 13: Send encrypted uid and HMAC
+            // Paso 13: Enviar uid cifrado y HMAC
             aesCipher.init(Cipher.ENCRYPT_MODE, aesKey, ivSpec);
             byte[] encUid = aesCipher.doFinal(uid.getBytes());
             byte[] hmacUid = hmac.doFinal(encUid);
@@ -212,7 +212,7 @@ public class PackageClient {
             out.write(hmacUid);
             out.flush();
     
-            // Step 14: Send encrypted package_id and HMAC
+            // Paso 14: Enviar package_id cifrado y HMAC
             byte[] encPkgId = aesCipher.doFinal(packageId.getBytes());
             byte[] hmacPkgId = hmac.doFinal(encPkgId);
     
@@ -223,7 +223,7 @@ public class PackageClient {
             out.write(hmacPkgId);
             out.flush();
     
-            // Step 16: Receive encrypted state and HMAC
+            // Paso 16: Recibir estado cifrado y HMAC
             int encStateLength = in.readInt();
             byte[] encState = new byte[encStateLength];
             in.readFully(encState);
@@ -232,7 +232,7 @@ public class PackageClient {
             byte[] hmacState = new byte[hmacStateLength];
             in.readFully(hmacState);
     
-            // Verify HMAC
+            // Verificar HMAC
             byte[] computedHmacState = hmac.doFinal(encState);
             if (!Arrays.equals(hmacState, computedHmacState)) {
                 System.out.println("HMAC del estado no válido.");
@@ -240,14 +240,14 @@ public class PackageClient {
                 return times;
             }
     
-            // Decrypt state
+            // Descifrar estado
             aesCipher.init(Cipher.DECRYPT_MODE, aesKey, ivSpec);
             byte[] stateBytes = aesCipher.doFinal(encState);
             String state = new String(stateBytes);
     
             System.out.println("Estado del paquete: " + state);
     
-            // Step 18: Terminate
+            // Paso 18: Terminar
             socket.close();
     
         } catch (Exception e) {
