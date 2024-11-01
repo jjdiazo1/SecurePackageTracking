@@ -145,14 +145,14 @@ public class PackageServer {
     public void startServerIterative() throws IOException {
         serverSocket = new ServerSocket(PORT);
         System.out.println("Servidor iterativo iniciado en el puerto " + PORT);
-
+    
         try {
             while (!Thread.currentThread().isInterrupted()) {
                 Socket clientSocket = serverSocket.accept();
-                handleClient(clientSocket);
+                handleClient(clientSocket, false); // Indicar que no es concurrente
             }
         } catch (IOException e) {
-            // Handle exception
+            // Manejar excepción
         } finally {
             if (serverSocket != null && !serverSocket.isClosed()) {
                 serverSocket.close();
@@ -171,15 +171,14 @@ public class PackageServer {
                 Socket clientSocket = serverSocket.accept();
                 executor.execute(() -> {
                     try {
-                        BigInteger[] dhParams = generateDiffieHellmanParameters();
-                        handleClient(clientSocket, dhParams[0], dhParams[1]);
+                        handleClient(clientSocket, true); // Indicar que es concurrente
                     } catch (Exception e) {
                         e.printStackTrace();
                     }
                 });
             }
         } catch (IOException e) {
-            // Handle exception
+            // Manejar excepción
         } finally {
             if (serverSocket != null && !serverSocket.isClosed()) {
                 serverSocket.close();
@@ -199,7 +198,7 @@ public class PackageServer {
         }
     }
 
-    private void handleClient(Socket clientSocket, BigInteger p, BigInteger g) {
+    private void handleClient(Socket clientSocket, boolean isConcurrent) {
         try (DataInputStream in = new DataInputStream(clientSocket.getInputStream());
              DataOutputStream out = new DataOutputStream(clientSocket.getOutputStream())) {
     
@@ -242,6 +241,18 @@ public class PackageServer {
     
             // Paso 7: Generar parámetros Diffie-Hellman G, P, G^x
             long startTimeDH = System.nanoTime();
+    
+            BigInteger p, g;
+            if (isConcurrent) {
+                // Generar parámetros Diffie-Hellman para el servidor concurrente
+                BigInteger[] dhParams = generateDiffieHellmanParameters();
+                p = dhParams[0];
+                g = dhParams[1];
+            } else {
+                // Usar parámetros constantes para el servidor iterativo
+                p = DiffieHellman.getP();
+                g = DiffieHellman.getG();
+            }
     
             // Generar exponente privado x y calcular G^x mod p
             SecureRandom random = new SecureRandom();
@@ -392,7 +403,6 @@ public class PackageServer {
             clientSocket.close();
     
             // Registrar tiempos
-            // Puedes guardar los tiempos en un archivo o en una estructura de datos para análisis posterior
             System.out.println("Tiempo para descifrar el reto: " + timeToDecryptChallenge + " ns");
             System.out.println("Tiempo para generar G, P, G^x: " + timeToGenerateDH + " ns");
             System.out.println("Tiempo para verificar la consulta: " + timeToVerify + " ns");
@@ -438,10 +448,6 @@ public class PackageServer {
         } catch (Exception e) {
             e.printStackTrace();
         }
-    }
-
-    private void handleClient(Socket clientSocket) {
-        handleClient(clientSocket, DiffieHellman.getP(), DiffieHellman.getG());
     }
 
     private String getStateString(int state) {
