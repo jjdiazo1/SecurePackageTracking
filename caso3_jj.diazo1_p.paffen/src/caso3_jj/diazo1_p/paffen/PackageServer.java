@@ -58,6 +58,9 @@ public class PackageServer {
         server.run();
     }
 
+    /**
+     * Ejecuta el servidor, permitiendo al usuario seleccionar el modo de operación.
+     */
     private void run() {
         try {
             System.out.println("Seleccione una opción:");
@@ -91,18 +94,26 @@ public class PackageServer {
         }
     }
 
+    /**
+     * Inicializa los estados de los paquetes con valores aleatorios.
+     */
     private void initializePackageStates() {
         packageStates = new HashMap<>();
         Random rand = new Random();
         int[] possibleStates = {ENOFICINA, RECOGIDO, ENCLASIFICACION, DESPACHADO, ENENTREGA, ENTREGADO};
     
-        for (int i = 0; i < 32; i++) {
+        for (int i = 0; i < 1000; i++) {
             int randomState = possibleStates[rand.nextInt(possibleStates.length)];
             packageStates.put("user" + i + ":pkg" + i, randomState);
         }
     }
     
 
+    /**
+     * Genera llaves RSA y las guarda en archivos.
+     * 
+     * @throws Exception si ocurre un error al generar las llaves.
+     */
     private void generateRSAKeys() throws Exception {
         // Generar llaves RSA
         KeyPairGenerator keyGen = KeyPairGenerator.getInstance("RSA");
@@ -118,6 +129,12 @@ public class PackageServer {
         System.out.println("Llaves RSA generadas y guardadas.");
     }
 
+
+    /**
+     * Lee las llaves RSA desde archivos.
+     * 
+     * @throws Exception si ocurre un error al leer las llaves.
+     */
     private void readRSAKeys() throws Exception {
         File privateKeyFile = new File(PRIVATE_KEY_FILE);
         File publicKeyFile = new File(PUBLIC_KEY_FILE);
@@ -142,6 +159,11 @@ public class PackageServer {
     }
     
 
+    /**
+     * Inicia el servidor en modo iterativo.
+     * 
+     * @throws IOException si ocurre un error al iniciar el servidor.
+     */
     public void startServerIterative() throws IOException {
         serverSocket = new ServerSocket(PORT);
         System.out.println("Servidor iterativo iniciado en el puerto " + PORT);
@@ -160,6 +182,13 @@ public class PackageServer {
         }
     }
 
+
+    /**
+     * Inicia el servidor en modo concurrente.
+     * 
+     * @param numThreads número de hilos a utilizar.
+     * @throws IOException si ocurre un error al iniciar el servidor.
+     */
     public void startServerConcurrent(int numThreads) throws IOException {
         serverSocket = new ServerSocket(PORT);
         System.out.println("Servidor concurrente iniciado en el puerto " + PORT);
@@ -187,6 +216,9 @@ public class PackageServer {
         }
     }
 
+    /**
+     * Detiene el servidor cerrando el socket del servidor.
+     */
     public void stopServer() {
         try {
             if (serverSocket != null && !serverSocket.isClosed()) {
@@ -198,6 +230,12 @@ public class PackageServer {
         }
     }
 
+    /**
+     * Maneja la conexión con un cliente.
+     * 
+     * @param clientSocket socket del cliente.
+     * @param isConcurrent indica si el servidor es concurrente.
+     */
     private void handleClient(Socket clientSocket, boolean isConcurrent) {
         try (DataInputStream in = new DataInputStream(clientSocket.getInputStream());
              DataOutputStream out = new DataOutputStream(clientSocket.getOutputStream())) {
@@ -450,6 +488,12 @@ public class PackageServer {
         }
     }
 
+    /**
+     * Obtiene la cadena correspondiente a un estado.
+     * 
+     * @param state estado del paquete.
+     * @return cadena correspondiente al estado.
+     */
     private String getStateString(int state) {
         switch (state) {
             case ENOFICINA:
@@ -469,83 +513,106 @@ public class PackageServer {
         }
     }
 
-    private void saveKeyToFile(String filename, byte[] keyBytes) throws IOException {
-        FileOutputStream fos = new FileOutputStream(filename);
-        fos.write(keyBytes);
-        fos.close();
+
+    /**
+ * Guarda una llave en un archivo.
+ * 
+ * @param filename el nombre del archivo donde se guardará la llave.
+ * @param keyBytes un arreglo de bytes que representa la llave.
+ * @throws IOException si ocurre un error al escribir en el archivo.
+ */
+private void saveKeyToFile(String filename, byte[] keyBytes) throws IOException {
+    FileOutputStream fos = new FileOutputStream(filename);
+    fos.write(keyBytes);
+    fos.close();
+}
+
+/**
+ * Lee una llave desde un archivo.
+ * 
+ * @param filename el nombre del archivo que contiene la llave.
+ * @return un arreglo de bytes que representa la llave.
+ * @throws IOException si ocurre un error al leer el archivo.
+ */
+private byte[] readKeyFromFile(String filename) throws IOException {
+    File file = new File(filename);
+    FileInputStream fis = new FileInputStream(file);
+    byte[] keyBytes = new byte[(int) file.length()];
+    fis.read(keyBytes);
+    fis.close();
+    return keyBytes;
+}
+
+/**
+ * Clase estática para la generación de parámetros Diffie-Hellman.
+ */
+private static class DiffieHellman {
+    private static BigInteger p;
+    private static BigInteger g;
+
+    static {
+        // p y g generados por OpenSSL
+        String pHex = "0098e60e1f707fc8f7b37f8ea5cee0b37d5b93664d19e31b7165ef3c8a8cef45acdecba4016aa0f960ffa2eb0f6a93def57aaacd9a2362bb37d075ad852018d371efa2600605fe465961c7d790f11985ec9f572cf08be42be7603ff5070d2612b4d56820b1c7a022ab96a9ee9aa57061725c02f610dafe9545bab3ec924b72d1bca7";
+        p = new BigInteger(pHex, 16);
+        g = BigInteger.valueOf(2);
     }
 
-    private byte[] readKeyFromFile(String filename) throws IOException {
-        File file = new File(filename);
-        FileInputStream fis = new FileInputStream(file);
-        byte[] keyBytes = new byte[(int) file.length()];
-        fis.read(keyBytes);
-        fis.close();
-        return keyBytes;
+    public static BigInteger getP() {
+        return p;
     }
 
-    // Generacion de parametros Diffie-Hellman 
-    private static class DiffieHellman {
-        private static BigInteger p;
-        private static BigInteger g;
+    public static BigInteger getG() {
+        return g;
+    }
+}
 
-        static {
-            // p y g generados por openssl
-            String pHex = "0098e60e1f707fc8f7b37f8ea5cee0b37d5b93664d19e31b7165ef3c8a8cef45acdecba4016aa0f960ffa2eb0f6a93def57aaacd9a2362bb37d075ad852018d371efa2600605fe465961c7d790f11985ec9f572cf08be42be7603ff5070d2612b4d56820b1c7a022ab96a9ee9aa57061725c02f610dafe9545bab3ec924b72d1bca7";
-            p = new BigInteger(pHex, 16);
-            g = BigInteger.valueOf(2);
-        }
+/**
+ * Genera parámetros Diffie-Hellman utilizando OpenSSL.
+ * 
+ * @return un arreglo de BigInteger que contiene p y g.
+ * @throws Exception si ocurre un error al generar los parámetros.
+ */
+private BigInteger[] generateDiffieHellmanParameters() throws Exception {
+    String opensslPath = Paths.get("OpenSSL-1.1.1h_win32", "OpenSSL-1.1.1h_win32", "openssl.exe").toString();
+    ProcessBuilder processBuilder = new ProcessBuilder(opensslPath, "dhparam", "-text", "1024");
+    processBuilder.redirectErrorStream(true);
+    Process process = processBuilder.start();
 
-        public static BigInteger getP() {
-            return p;
-        }
+    BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+    StringBuilder output = new StringBuilder();
+    String line;
+    while ((line = reader.readLine()) != null) {
+        output.append(line).append("\n");
+    }
+    reader.close();
+    process.waitFor();
 
-        public static BigInteger getG() {
-            return g;
-        }
+    Pattern pPattern = Pattern.compile("prime\\s*:\\s*([0-9A-Fa-f:\\s]+)");
+    Matcher pMatcher = pPattern.matcher(output);
+
+    BigInteger p = null;
+    BigInteger g = null;
+
+    if (pMatcher.find()) {
+        String pHex = pMatcher.group(1).replaceAll("[^0-9A-Fa-f]", ""); // Eliminar caracteres no hexadecimales
+        p = new BigInteger(pHex, 16);
     }
 
-    private BigInteger[] generateDiffieHellmanParameters() throws Exception {
-        String opensslPath = Paths.get("OpenSSL-1.1.1h_win32", "OpenSSL-1.1.1h_win32", "openssl.exe").toString();
-        ProcessBuilder processBuilder = new ProcessBuilder(opensslPath, "dhparam", "-text", "1024");
-        processBuilder.redirectErrorStream(true);
-        Process process = processBuilder.start();
-    
-        BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
-        StringBuilder output = new StringBuilder();
-        String line;
-        while ((line = reader.readLine()) != null) {
-            output.append(line).append("\n");
-        }
-        reader.close();
-        process.waitFor();
-    
-        Pattern pPattern = Pattern.compile("prime\\s*:\\s*([0-9A-Fa-f:\\s]+)");
-        Matcher pMatcher = pPattern.matcher(output);
-    
-        BigInteger p = null;
-        BigInteger g = null;
-    
-        if (pMatcher.find()) {
-            String pHex = pMatcher.group(1).replaceAll("[^0-9A-Fa-f]", ""); // Eliminar caracteres no hexadecimales
-            p = new BigInteger(pHex, 16);
-        }
-    
-        // Valor aleatorio para g
-        SecureRandom random = new SecureRandom();
-        g = BigInteger.valueOf(random.nextInt(100) + 2); // Valor aleatorio entre 2 y 101
-    
-        // Verificar que p y g sean válidos
-        if (p == null || g == null || p.signum() <= 0 || g.signum() <= 0) {
-            System.out.println("Salida de OpenSSL: " + output.toString());
-            throw new IllegalArgumentException("Parámetros Diffie-Hellman inválidos generados");
-        }
-    
-        // Mostrar los parámetros generados por OpenSSL
-        System.out.println("Parámetros Diffie-Hellman generados:");
-        System.out.println("p: " + p.toString(16));
-        System.out.println("g: " + g.toString(16));
-    
-        return new BigInteger[]{p, g};
-    }  
+    // Valor aleatorio para g
+    SecureRandom random = new SecureRandom();
+    g = BigInteger.valueOf(random.nextInt(100) + 2); // Valor aleatorio entre 2 y 101
+
+    // Verificar que p y g sean válidos
+    if (p == null || g == null || p.signum() <= 0 || g.signum() <= 0) {
+        System.out.println("Salida de OpenSSL: " + output.toString());
+        throw new IllegalArgumentException("Parámetros Diffie-Hellman inválidos generados");
+    }
+
+    // Mostrar los parámetros generados por OpenSSL
+    System.out.println("Parámetros Diffie-Hellman generados:");
+    System.out.println("p: " + p.toString(16));
+    System.out.println("g: " + g.toString(16));
+
+    return new BigInteger[]{p, g};
+}
 }
