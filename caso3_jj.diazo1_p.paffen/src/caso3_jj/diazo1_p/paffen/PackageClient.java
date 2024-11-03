@@ -11,30 +11,41 @@ import javax.crypto.*;
 import javax.crypto.spec.*;
 
 public class PackageClient {
-    private static final String SERVER_ADDRESS = "localhost";
-    private static final int SERVER_PORT = 12345;
-    private static final String SERVER_PUBLIC_KEY_FILE = "public.key";
+    private static final String SERVER_ADDRESS = "localhost"; // Dirección del servidor
+    private static final int SERVER_PORT = 12345; // Puerto del servidor
+    private static final String SERVER_PUBLIC_KEY_FILE = "public.key"; // Archivo de la llave pública del servidor
 
-    private PublicKey serverPublicKey;
+    private PublicKey serverPublicKey; // Llave pública del servidor
 
     public static void main(String[] args) {
         PackageClient client = new PackageClient();
         try {
-            client.readServerPublicKey();
-            client.run();
+            client.readServerPublicKey(); // Leer la llave pública del servidor
+            client.run(); // Ejecutar el cliente
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
+    /**
+     * Lee la llave pública del servidor desde un archivo.
+     * 
+     * @throws Exception si ocurre un error al leer la llave pública.
+     */
     public void readServerPublicKey() throws Exception {
-        // Leer llave pública del servidor
         byte[] publicKeyBytes = readKeyFromFile(SERVER_PUBLIC_KEY_FILE);
         X509EncodedKeySpec publicSpec = new X509EncodedKeySpec(publicKeyBytes);
         KeyFactory keyFactory = KeyFactory.getInstance("RSA");
         serverPublicKey = keyFactory.generatePublic(publicSpec);
     }
 
+    /**
+     * Lee una llave desde un archivo.
+     * 
+     * @param filename el nombre del archivo que contiene la llave.
+     * @return un arreglo de bytes que representa la llave.
+     * @throws IOException si ocurre un error al leer el archivo.
+     */
     private byte[] readKeyFromFile(String filename) throws IOException {
         File file = new File(filename);
         FileInputStream fis = new FileInputStream(file);
@@ -44,17 +55,20 @@ public class PackageClient {
         return keyBytes;
     }
 
+    /**
+     * Ejecuta el cliente, permitiendo al usuario seleccionar el modo de operación.
+     */
     private void run() {
         try {
             Scanner scanner = new Scanner(System.in);
             System.out.println("Seleccione el modo de operación: \n 1. Iterativo \n 2. Concurrente");
             int mode = scanner.nextInt();
             if (mode == 1) {
-                runIterative();
+                runIterative(); // Ejecutar en modo iterativo
             } else if (mode == 2) {
                 System.out.println("Ingrese el número de delegados:");
                 int numDelegates = scanner.nextInt();
-                runConcurrent(numDelegates);
+                runConcurrent(numDelegates); // Ejecutar en modo concurrente
             } else {
                 System.out.println("Modo no válido.");
             }
@@ -64,21 +78,76 @@ public class PackageClient {
         }
     }
 
+    /**
+     * Ejecuta el cliente en modo iterativo, enviando solicitudes secuenciales.
+     */
     private void runIterative() {
         for (int i = 0; i < 32; i++) {
             sendRequest("user" + i, "pkg" + i);
         }
     }
 
+    /**
+     * Ejecuta el cliente en modo concurrente, enviando solicitudes en paralelo.
+     * 
+     * @param numDelegates el número de delegados (solicitudes) a enviar.
+     */
     private void runConcurrent(int numDelegates) {
+        // Enviar el número de delegados al servidor
+        try (Socket socket = new Socket(SERVER_ADDRESS, SERVER_PORT);
+             DataOutputStream out = new DataOutputStream(socket.getOutputStream())) {
+            out.writeInt(numDelegates);
+            out.flush();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    
+        // Limitar el número máximo de delegados a 40
+        int maxDelegates = 40;
+        Semaphore delegateSemaphore = new Semaphore(maxDelegates);
+    
         ExecutorService executorService = Executors.newFixedThreadPool(numDelegates);
         for (int i = 0; i < numDelegates; i++) {
             final int index = i;
-            executorService.submit(() -> sendRequest("user" + index, "pkg" + index));
+            executorService.submit(() -> {
+                try {
+                    // Adquirir un permiso antes de enviar la solicitud
+                    delegateSemaphore.acquire();
+                    try {
+                        sendRequest("user" + index, "pkg" + index);
+                    } finally {
+                        // Liberar el permiso después de que la solicitud haya sido manejada
+                        delegateSemaphore.release();
+                    }
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            });
+    
+            // Cada vez que se completa un grupo de 40 delegados, esperar 1 ms
+            if ((i + 1) % maxDelegates == 0 || i == numDelegates - 1) {
+                try {
+                    // Esperar a que todos los delegados actuales terminen
+                    delegateSemaphore.acquire(maxDelegates);
+                    delegateSemaphore.release(maxDelegates);
+                    System.out.println("Se liberaron 40 delegados.");
+                    // Esperar 1 ms antes de permitir que el siguiente grupo de delegados se ejecute
+                    Thread.sleep(1);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
         }
         executorService.shutdown();
     }
 
+    /**
+     * Envía una solicitud al servidor para obtener el estado de un paquete.
+     * 
+     * @param uid el identificador del usuario.
+     * @param packageId el identificador del paquete.
+     * @return un arreglo de tiempos medidos durante la solicitud.
+     */
     public long[] sendRequest(String uid, String packageId) {
         long[] times = new long[3];
         try {
