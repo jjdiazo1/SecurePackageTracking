@@ -1,73 +1,86 @@
 classDiagram
-    direction LR
-    class ClientePaquete {
-        - String DIRECCION_SERVIDOR
-        - int PUERTO_SERVIDOR
-        - String ARCHIVO_CLAVE_PUBLICA_SERVIDOR
-        - PublicKey clavePublicaServidor
-        + main(String[] args)
-        + leerClavePublicaServidor() : void
-        - leerClaveDesdeArchivo(String nombreArchivo) : byte[]
-        - ejecutar() : void
-        - ejecutarIterativo() : void
-        - ejecutarConcurrente(int numDelegados) : void
-        + enviarSolicitud(String uid, String idPaquete) : long[]
-    }
+direction TB
+class Test {
+    - static final int[] THREAD_COUNTS
+    - static final int ITERATIVE_REQUESTS
+    - static final Path CSV_FILE
+    --
+    + main(String[] args)
+    - runIterativeScenario(PrintWriter writer)
+    - runConcurrentScenario(PrintWriter writer, int threadCount)
+    - collectTimingData(PrintWriter writer, String scenario)
+    - estimateProcessorPerformance()
+}
+style Test fill:#DDDDDD
 
-    class ServidorPaquete {
-        - int PUERTO
-        - String ARCHIVO_CLAVE_PRIVADA
-        - String ARCHIVO_CLAVE_PUBLICA
-        - ServerSocket socketServidor
-        - Map<String, Integer> estadosPaquete
-        - PrivateKey clavePrivada
-        - PublicKey clavePublica
-        + ServidorPaquete()
-        + main(String[] args)
-        - ejecutar() : void
-        - inicializarEstadosPaquete() : void
-        - generarClavesRSA() : void
-        - leerClavesRSA() : void
-        + iniciarServidorIterativo() : void
-        + iniciarServidorConcurrente(int numHilos) : void
-        + detenerServidor() : void
-        - manejarCliente(Socket socketCliente) : void
-        - obtenerEstadoComoString(int estado) : String
-        - guardarClaveEnArchivo(String nombreArchivo, byte[] claveBytes) : void
-        - leerClaveDesdeArchivo(String nombreArchivo) : byte[]
-    }
+class ProcessorPerformanceEstimator {
+    - static final Path CSV_FILE
+    - static final Path OUTPUT_FILE
+    --
+    + estimateAndWriteToFile()
+    - calculateAverage(List<Long> times)
+    - getProcessorSpeed()
+}
+style ProcessorPerformanceEstimator fill:#DDDDDD
 
-    class DiffieHellman {
-        + BigInteger obtenerP() : BigInteger
-        + BigInteger obtenerG() : BigInteger
-    }
+class PackageServer {
+    - static final int PORT
+    - static final String PRIVATE_KEY_FILE
+    - static final String PUBLIC_KEY_FILE
+    - ServerSocket serverSocket
+    --
+    + PackageServer()
+    + main(String[] args)
+    - run()
+    - initializePackageStates()
+    - generateRSAKeys()
+    - readRSAKeys()
+    + startServerIterative()
+    + startServerConcurrent(int numThreads)
+    + stopServer()
+    - handleClient(Socket clientSocket, boolean isConcurrent)
+    - getStateString(int state)
+    - saveKeyToFile(String filename, byte[] keyBytes)
+    - readKeyFromFile(String filename)
+    --
+    static ConcurrentLinkedQueue<Long> challengeResponseTimes
+    static ConcurrentLinkedQueue<Long> dhGenerationTimes
+    static ConcurrentLinkedQueue<Long> verificationTimes
+    static ConcurrentLinkedQueue<Long> symmetricEncryptionTimes
+    static ConcurrentLinkedQueue<Long> asymmetricEncryptionTimes
+    --
+    - Map<String, Integer> packageStates
+    - PrivateKey privateKey
+    - PublicKey publicKey
+}
+style PackageServer fill:#DDDDDD
 
-    class EstimadorRendimientoProcesador {
-        + estimarYEscribirEnArchivo() : void
-        - calcularPromedio(List<Long> tiempos) : double
-        - obtenerVelocidadProcesador() : String
-    }
+class PackageClient {
+    - static final String SERVER_ADDRESS
+    - static final int SERVER_PORT
+    - static final String SERVER_PUBLIC_KEY_FILE
+    - PublicKey serverPublicKey
+    --
+    + main(String[] args)
+    + readServerPublicKey()
+    - readKeyFromFile(String filename)
+    - run()
+    - runIterative()
+    - runConcurrent(int numDelegates)
+    + sendRequest(String uid, String packageId) : long[]
+}
+style PackageClient fill:#DDDDDD
 
-    class Prueba {
-        - int[] CUENTAS_HILOS
-        - int SOLICITUDES_ITERATIVAS
-        - String ARCHIVO_CSV
-        + main(String[] args)
-        - ejecutarEscenarioIterativo(PrintWriter escritor) : void
-        - ejecutarEscenarioConcurrente(PrintWriter escritor, int cantidadHilos) : void
-        - recolectarDatosDeTiempos(PrintWriter escritor, String escenario) : void
-        - estimarRendimientoProcesador() : void
-    }
+class DiffieHellman {
+    - static BigInteger p
+    - static BigInteger g
+    --
+    + getP() : BigInteger
+    + getG() : BigInteger
+}
+style DiffieHellman fill:#DDDDDD
 
-    ClientePaquete --> ServidorPaquete : interactúa con
-    ServidorPaquete ..> DiffieHellman : utiliza
-    ServidorPaquete ..> EstimadorRendimientoProcesador : utiliza
-    Prueba --> ClientePaquete : utiliza
-    Prueba --> ServidorPaquete : utiliza
-    Prueba ..> EstimadorRendimientoProcesador : utiliza
-
-    style ClientePaquete fill:#d3d3d3
-    style ServidorPaquete fill:#d3d3d3
-    style DiffieHellman fill:#d3d3d3
-    style EstimadorRendimientoProcesador fill:#d3d3d3
-    style Prueba fill:#d3d3d3
+Test --> PackageServer : utiliza
+Test --> PackageClient : utiliza
+Test --> ProcessorPerformanceEstimator : utiliza
+PackageServer ..> DiffieHellman : utiliza
