@@ -3,78 +3,92 @@
 
 ```mermaid
 classDiagram
-    direction LR
-    class PackageClient {
-        - String SERVER_ADDRESS
-        - int SERVER_PORT
-        - String SERVER_PUBLIC_KEY_FILE
-        - PublicKey serverPublicKey
-        + main(String[] args)
-        + readServerPublicKey() : void
-        - readKeyFromFile(String filename) : byte[]
-        - run() : void
-        - runIterative() : void
-        - runConcurrent(int numDelegates) : void
-        + sendRequest(String uid, String packageId) : long[]
-    }
+direction LR
+class Test {
+    - static final int[] THREAD_COUNTS
+    - static final int ITERATIVE_REQUESTS
+    - static final Path CSV_FILE
+    --
+    + main(String[] args)
+    - runIterativeScenario(PrintWriter writer)
+    - runConcurrentScenario(PrintWriter writer, int threadCount)
+    - collectTimingData(PrintWriter writer, String scenario)
+    - estimateProcessorPerformance()
+}
+style Test fill:#DDDDDD
 
-    class PackageServer {
-        - int PORT
-        - String PRIVATE_KEY_FILE
-        - String PUBLIC_KEY_FILE
-        - ServerSocket serverSocket
-        - Map<String, Integer> packageStates
-        - PrivateKey privateKey
-        - PublicKey publicKey
-        + PackageServer()
-        + main(String[] args)
-        - run() : void
-        - initializePackageStates() : void
-        - generateRSAKeys() : void
-        - readRSAKeys() : void
-        + startServerIterative() : void
-        + startServerConcurrent(int numThreads) : void
-        + stopServer() : void
-        - handleClient(Socket clientSocket) : void
-        - getStateString(int state) : String
-        - saveKeyToFile(String filename, byte[] keyBytes) : void
-        - readKeyFromFile(String filename) : byte[]
-    }
+class ProcessorPerformanceEstimator {
+    - static final Path CSV_FILE
+    - static final Path OUTPUT_FILE
+    --
+    + estimateAndWriteToFile()
+    - calculateAverage(List<Long> times)
+    - getProcessorSpeed()
+}
+style ProcessorPerformanceEstimator fill:#DDDDDD
 
-    class DiffieHellman {
-        + BigInteger getP() : BigInteger
-        + BigInteger getG() : BigInteger
-    }
+class PackageServer {
+    - static final int PORT
+    - static final String PRIVATE_KEY_FILE
+    - static final String PUBLIC_KEY_FILE
+    - ServerSocket serverSocket
+    --
+    + PackageServer()
+    + main(String[] args)
+    - run()
+    - initializePackageStates()
+    - generateRSAKeys()
+    - readRSAKeys()
+    + startServerIterative()
+    + startServerConcurrent(int numThreads)
+    + stopServer()
+    - handleClient(Socket clientSocket, boolean isConcurrent)
+    - getStateString(int state)
+    - saveKeyToFile(String filename, byte[] keyBytes)
+    - readKeyFromFile(String filename)
+    --
+    static ConcurrentLinkedQueue<Long> challengeResponseTimes
+    static ConcurrentLinkedQueue<Long> dhGenerationTimes
+    static ConcurrentLinkedQueue<Long> verificationTimes
+    static ConcurrentLinkedQueue<Long> symmetricEncryptionTimes
+    static ConcurrentLinkedQueue<Long> asymmetricEncryptionTimes
+    --
+    - Map<String, Integer> packageStates
+    - PrivateKey privateKey
+    - PublicKey publicKey
+}
+style PackageServer fill:#DDDDDD
 
-    class ProcessorPerformanceEstimator {
-        + estimateAndWriteToFile() : void
-        - calculateAverage(List<Long> times) : double
-        - getProcessorSpeed() : String
-    }
+class PackageClient {
+    - static final String SERVER_ADDRESS
+    - static final int SERVER_PORT
+    - static final String SERVER_PUBLIC_KEY_FILE
+    - PublicKey serverPublicKey
+    --
+    + main(String[] args)
+    + readServerPublicKey()
+    - readKeyFromFile(String filename)
+    - run()
+    - runIterative()
+    - runConcurrent(int numDelegates)
+    + sendRequest(String uid, String packageId) : long[]
+}
+style PackageClient fill:#DDDDDD
 
-    class Test {
-        - int[] THREAD_COUNTS
-        - int ITERATIVE_REQUESTS
-        - String CSV_FILE
-        + main(String[] args)
-        - runIterativeScenario(PrintWriter writer) : void
-        - runConcurrentScenario(PrintWriter writer, int threadCount) : void
-        - collectTimingData(PrintWriter writer, String scenario) : void
-        - estimateProcessorPerformance() : void
-    }
+class DiffieHellman {
+    - static BigInteger p
+    - static BigInteger g
+    --
+    + getP() : BigInteger
+    + getG() : BigInteger
+}
+style DiffieHellman fill:#DDDDDD
 
-    PackageClient --> PackageServer : interacts with
-    PackageServer ..> DiffieHellman : uses
-    PackageServer ..> ProcessorPerformanceEstimator : uses
-    Test --> PackageClient : uses
-    Test --> PackageServer : uses
-    Test ..> ProcessorPerformanceEstimator : uses
+Test --> PackageServer : uses
+Test --> PackageClient : uses
+Test --> ProcessorPerformanceEstimator : uses
+PackageServer ..> DiffieHellman : uses
 
-    style PackageClient fill:#d3d3d3
-    style PackageServer fill:#d3d3d3
-    style DiffieHellman fill:#d3d3d3
-    style ProcessorPerformanceEstimator fill:#d3d3d3
-    style Test fill:#d3d3d3
 ```
 
 
