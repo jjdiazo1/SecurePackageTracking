@@ -1,3 +1,12 @@
+## Introduction
+The Secure Package Tracking System is a Java-based application designed to simulate a secure communication protocol between a client and a server for tracking package statuses. It emphasizes cryptographic techniques to ensure confidentiality, integrity, and authentication during data exchange.
+
+## Features
+- **Secure Communication Protocol**: Implements a custom protocol using RSA, Diffie-Hellman key exchange, AES encryption, and HMAC for authentication and data integrity.
+- **Iterative and Concurrent Modes**: Supports both iterative (single-threaded) and concurrent (multi-threaded) server operation modes.
+- **Performance Testing**: Includes a test suite to measure the performance of cryptographic operations under different scenarios.
+- **Processor Performance Estimation**: Estimates processor speed and encryption operations per second based on collected data.
+- **Detailed Logging**: Provides comprehensive console output for each step, including timing data for cryptographic operations.
 
 ## UML
 
